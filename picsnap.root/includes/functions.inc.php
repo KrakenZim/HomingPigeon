@@ -21,7 +21,7 @@ function isFieldEmptyLogin($email, $pwd)
 function isEmailValid($email)
 {
   $result = false;
-  if (preg_match("/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,3}$/", $email)) {
+  if (preg_match("/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,3}$/", $email)) {
     $result = true;
   }
   return $result;
@@ -61,9 +61,9 @@ function isUIDExists($conn, $email)
 
 function createNewUser($conn, $fname, $lname, $email, $pwd, $address)
 {
-  $uIDExists=isUIDExists($conn,$email);
-  $type='customer';
-  $is_blocked=0;
+  $uIDExists = isUIDExists($conn, $email);
+  $type = 'customer';
+  $is_blocked = 0;
   $sql = "Insert into users (first_name,last_name,email,password,address,type,is_blocked) values (?,?,?,?,?,?,?);";
   $stmt = mysqli_stmt_init($conn);
   var_dump($conn);
@@ -72,80 +72,86 @@ function createNewUser($conn, $fname, $lname, $email, $pwd, $address)
     exit();
   }
   //triggers if email already exists
-    if($uIDExists==true){
-        header("location: ../signup.php?error=emailalreadyexists");
-        exit();
-}
+  if ($uIDExists == true) {
+    header("location: ../signup.php?error=emailalreadyexists");
+    exit();
+  }
   $hashedpwd = password_hash($pwd, PASSWORD_DEFAULT);
-  mysqli_stmt_bind_param($stmt, "ssssssi", $fname, $lname, $email, $hashedpwd, $address,$type,$is_blocked);
+  mysqli_stmt_bind_param($stmt, "ssssssi", $fname, $lname, $email, $hashedpwd, $address, $type, $is_blocked);
   mysqli_stmt_execute($stmt);
 
-  
+
 
   mysqli_stmt_close($stmt);
   header("location: ../signup.php?error=none");
   exit();
 }
 
-function loginUser($conn, $email, $pwd){
+function loginUser($conn, $email, $pwd)
+{
   $uIDExists = isUIDExists($conn, $email);
 
   if ($uIDExists === false) {
-    header("location: ../login.php?error=wronguserlogin");
+    header("location: ../login.php?error=wronguserinfo");
     exit();
   }
 
   $hashedPwd = $uIDExists["password"];
     $checkpwd=password_verify($pwd,$hashedPwd);
     if($checkpwd===false){
-        header("location: ../login.php?error=wronguserpassword");
+        header("location: ../login.php?error=wronguserinfo");
+    exit();
+  } else if ($checkpwd === true) {
+    session_start();
+    $_SESSION["id"] = $uIDExists["id"];
+    $_SESSION["email"] = $uIDExists["email"];
+    $_SESSION["type"] = getAct($conn, $_SESSION["id"])['type'];
+    $_SESSION['is_blocked'] = getAct($conn, $_SESSION["id"])['is_blocked'];
+    if ($_SESSION['type'] == 'admin') {
+
+      header("location: ../admin-accounts.php");
+      echo 'customer';
+      echo $_SESSION['email'];
+      exit();
+    } elseif ($_SESSION['type'] == 'customer') {
+      if ($_SESSION['is_blocked'] === 1) {
+        header("location: ../account-blocked.php");
         exit();
-    }
-    else if($checkpwd===true){
-        session_start();
-        $_SESSION["id"]=$uIDExists["id"];
-        $_SESSION["email"]=$uIDExists["email"];
-        $_SESSION["type"]=getAct($conn,$_SESSION["id"])['type'];
-        $_SESSION['is_blocked']=getAct($conn,$_SESSION["id"])['is_blocked'];
-        if($_SESSION['type']=='admin'){
+      }
+      header("location: ../index.php");
+      echo 'customer';
+      echo $_SESSION['email'];
+      exit();
+    } else {
 
-            header("location: ../admin-accounts.php");
-            echo 'customer';
-            echo $_SESSION['email'];
-            exit();
-        }elseif($_SESSION['type']=='customer'){
-            if($_SESSION['is_blocked']===1){
-                header("location: ../account-blocked.php");
-                exit();
-            }
-            header("location: ../index.php");
-            echo 'customer';
-            echo $_SESSION['email'];
-            exit();
-        }else{
-            
-            // header("location: ../index.php");
-            echo $_SESSION['email'].'<br>';
-            echo $_SESSION['type'].'<br>';
-            echo 'failure';
-            exit();
-        }
+      // header("location: ../index.php");
+      echo $_SESSION['email'] . '<br>';
+      echo $_SESSION['type'] . '<br>';
+      echo 'failure';
+      exit();
     }
-
+  }
 }
 
-function getAct($conn,$id){
-    $sql='select * from users where id =?';
-    $stmt=$conn->prepare($sql);
-    $stmt->bind_param('i',$id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();//[id=>1, fn=>rami]
-    var_dump($row['type']);
-    return $row;
+function getAct($conn, $id)
+{
+  $sql = 'select * from users where id =?';
+  $stmt = $conn->prepare($sql);
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  $row = $result->fetch_assoc(); //[id=>1, fn=>rami]
+  var_dump($row['type']);
+  return $row;
 }
 
-/* end of Sign up and Login functions Edgar */
+/* end of Sign up and Login functions Rami */
+
+/**
+ * Rami Chaouki
+ * Initializes a new cart row for given id if none exist
+ */
+
 
 /**
  * Ali Nehme
@@ -181,7 +187,6 @@ function unpaid_cart_id()
 
   $cart_id_array = mysqli_query($conn, "SELECT max(id) as cart_id FROM carts WHERE user_id='$userid' AND is_paid='0'");
   $cart_id = mysqli_fetch_array($cart_id_array)["cart_id"];
-
   return $cart_id;
 }
 
@@ -400,7 +405,7 @@ function create_postcard_cards($dbresult)
 /**
  * Ali Nehme
  * A function that edits personal info of a user
- * 
+ *
  */
 
 function edit_profile_event_listner()
@@ -416,7 +421,7 @@ function edit_profile_event_listner()
 /**
  * Ali Nehme
  * A function that edits personal info of a user using the form in in the edit_profile.php
- * 
+ *
  */
 function edit_profile()
 {
@@ -467,7 +472,7 @@ function edit_profile()
 /**
  * Ali Nehme
  * A function that edits the password of a user using the form in in the change_password.php
- * 
+ *
  */
 function change_password()
 {
@@ -504,8 +509,8 @@ function change_password()
   }
 
   if (empty($err["empty_fields"]) && empty($err["old_password"]) && empty($err["new_password"]) && empty($err["confirm_password"])) {
-    $hashed_password = password_hash($pwd, PASSWORD_DEFAULT);
-    $addquery = "UPDATE users SET password = '$hashed_password' WHERE id = $userid";
+    $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+    $addquery = "UPDATE users SET password ='$hashed_password' WHERE id = $userid";
     if (!mysqli_query($conn, $addquery)) {
       $err["mysql_error"] = sprintf("Error message: %s\n", mysqli_error($conn));
     } else {
@@ -523,6 +528,26 @@ function change_password()
  */
 function displayUserRows($conn)
 {
+    $first_name_error='';
+  $last_name_error='';
+  $email_error='';
+  $password_error='';
+  $address_error='';
+  if(isset($_GET['edit_first_name'])){
+    $first_name_error=$_GET['edit_first_name'];
+  }
+  if(isset($_GET['edit_last_name'])){
+    $last_name_error=$_GET['edit_last_name'];
+  }
+  if(isset($_GET['edit_email'])){
+    $email_error=$_GET['edit_email'];
+  }
+  if(isset($_GET['edit_address'])){
+    $address_error=$_GET['edit_address'];
+  }
+  if(isset($_GET['edit_password'])){
+    $password_error=$_GET['edit_password'];
+  }
   $sql = 'select * from users';
   $result = mysqli_query($conn, $sql);
   $rows = mysqli_fetch_all($result, MYSQLI_ASSOC);
@@ -532,14 +557,19 @@ function displayUserRows($conn)
       echo '<form action="admin-accounts.php" method="POST">';
       echo '<tr>';
       echo '<th scope="row">' . $id . '</th>';
-      echo '<td><input type=text name="first_name" value="' . $first_name . '"></td>';
-      echo '<td><input type=text name="last_name" value="' . $last_name . '"></td>';
-      echo '<td><input type=text name="email" value=' . $email . '></td>';
-      echo '<td><input type=text name="password" value=""></td>';
-      echo '<td><input type=text name="address" value="' . $address . '"></td>';
+      echo '<td><input type=text name="first_name" value="' . $first_name . '">';
+      echo '<br> <span>'.$first_name_error.'<span></td>';
+      echo '<td><input type=text name="last_name" value="' . $last_name . '">';
+      echo '<br> <span>'.$last_name_error.'<span></td>';
+      echo '<td><input type=text name="email" value=' . $email . '>';
+      echo '<br> <span>'.$email_error.'<span></td>';
+      echo '<td><input type=text name="password" value="">';
+      echo '<br> <span>'.$password_error.'<span></td>';
+      echo '<td><input type=text name="address" value="' . $address . '">';
+      echo '<br> <span>'.$address_error.'<span></td>';
       echo '<td>' . accountTypeDropdown($type) . '</td>';
       echo '<td>' . blockedStatusDropdown($is_blocked) . '</td>';
-      echo '<input type="hidden" name="id" value=' . $id . '/>';
+      echo '<input type="hidden" name="id" value=' . $id . '>';
       echo '<input type="hidden" name="edit"/>'; //hidden input used to distinguish between which submit form was used
       echo '<td><button type="submit">Save</button></td>';
       echo '<td><button><a href="admin-accounts.php?delete=' . $id . '">Delete</button></td>';
@@ -570,21 +600,33 @@ function displayAddAccount($conn)
 {
   $first_name_error='';
   $last_name_error='';
+  $email_error='';
+  $password_error='';
+  $address_error='';
   if(isset($_GET['first_name'])){
     $first_name_error=$_GET['first_name'];
   }
-  if(isset($_GET['last_name'])){
-    $last_name_error=$_GET['last_name'];
+  if (isset($_GET['last_name'])) {
+    $last_name_error = $_GET['last_name'];
+  }
+  if(isset($_GET['email'])){
+    $email_error=$_GET['email'];
+  }
+  if(isset($_GET['password'])){
+    $password_error=$_GET['password'];
+  }
+  if(isset($_GET['address'])){
+    $address_error=$_GET['address'];
   }
   $table = 'users';
   echo '<form action="admin-accounts.php" method="POST">';
   echo '<tr>';
   echo '<th class=text-danger scope="row">' . getNextIdUser($conn) . '</th>';
-  echo '<td><input type=text name="first_name" value='.$first_name_error.'></td>';
-  echo '<td><input type=text name="last_name" value='.$last_name_error.'></td>';
-  echo '<td><input type=text name="email" value=""></td>';
-  echo '<td><input type=text name="password" value=""></td>';
-  echo '<td><input type=text name="address" value=""></td>';
+  echo '<td><input type=text name="first_name" value="" placeholder='.$first_name_error.'></td>';
+  echo '<td><input type=text name="last_name" value="" placeholder='.$last_name_error.'></td>';
+  echo '<td><input type=text name="email" value="" placeholder='.$email_error.'></td>';
+  echo '<td><input type=text name="password" value="" placeholder='.$password_error.'></td>';
+  echo '<td><input type=text name="address" value="" placeholder='.$address_error.'></td>';
   echo '<input type="hidden" name="add"/>'; //hidden input used to distinguish between which submit form was used
   echo '<td>' . accountTypeDropdown() . '</td>';
   echo '<td>' . blockedStatusDropdown() . '</td>';
@@ -601,63 +643,106 @@ function displayAddAccount($conn)
  */
 function is_FN_invalid($first_name){
     if(empty($first_name)){
-        echo 'fn empty';
         return 'first_name="Please enter a name..."';
     }else{
-        echo 'fn not empty';
         return false;
     }
 }
 
- /**
+/**
  * Rami Chaouki
  * Admin Account Validation
  * LAST NAME
  */
-function is_LN_invalid($last_name){
-    if(empty($last_name)){
-        return 'last_name="Please enter a name..."';
-    }else{
-        return false;
-    }
+function is_LN_invalid($last_name)
+{
+  if (empty($last_name)) {
+    return 'last_name="Please enter a name..."';
+  } else {
+    return false;
+  }
 }
 /**
  * Rami Chaouki
  * Admin Account Validation
  * EMAIL NAME
  */
-
+function is_email_invalid($email){
+    if(empty($email)){
+        return 'email="Please enter an email..."';
+    }elseif(!isEmailValid($email)){
+        return 'email="Format: abc@xyz.ab"';
+    }else{
+        return false;
+    }
+}
  /**
  * Rami Chaouki
  * Admin Account Validation
  * PASSWORD
  */
-
+function is_password_invalid($password,$skipEmpty=false){
+    if(empty($password)&&!$skipEmpty){
+        return 'password="Please enter an password..."';
+    }elseif(strlen($password)<6&&strlen($password)>0){
+        return 'password="Pwd must be 6 char min"';
+    }
+    else{
+        return false;
+    }
+}
  /**
  * Rami Chaouki
  * Admin Account Validation
  * ADDRESS
  */
+function is_address_invalid($address){
+    if(empty($address)){
+        return 'address="Please enter an address..."';
+    }else{
+        return false;
+    }
+}
 
 /**
  * Rami Chaouki
  * Admin Account Validation
  * ADMIN ACCOUNTS VALIDATION
  */
-function admin_account_validation($first_name,$last_name){
+function admin_account_validation($first_name,$last_name,$email,$password,$address,$id=-1,$isEdit=false){
     $errors='';
+    $editSpecifier='';
+    $skipEmpty=false;
+    if($isEdit==true){
+        $editSpecifier="edit_";
+        $skipEmpty=true;
+    }
     if(is_FN_invalid($first_name)){
         $errors=$errors==''?'?':$errors.'&';
-        $errors=$errors.is_FN_invalid($first_name);
+        $errors=$errors.$editSpecifier.is_FN_invalid($first_name);
         echo $errors;
     }
     if(is_LN_invalid($last_name)){
         $errors=$errors==''?'?':$errors.'&';
-        $errors=$errors.is_LN_invalid($last_name);
-        // echo $errors;
+        $errors=$errors.$editSpecifier.is_LN_invalid($last_name);
     }
-    // header('location: http://localhost/picsnap.root/admin-accounts.php'.$errors);
-    exit();
+    if(is_email_invalid($email)){
+        $errors=$errors==''?'?':$errors.'&';
+        $errors=$errors.$editSpecifier.is_email_invalid($email);
+    }
+    
+    if(is_password_invalid($password,$skipEmpty)){
+        $errors=$errors==''?'?':$errors.'&';
+        $errors=$errors.$editSpecifier.is_password_invalid($password,$skipEmpty);
+    }
+    
+    if(is_address_invalid($address)){
+        $errors=$errors==''?'?':$errors.'&';
+        $errors=$errors.$editSpecifier.is_address_invalid($address);
+    }
+    if(!$errors==''){
+    header('location: http://localhost/picsnap.root/admin-accounts.php'.$errors.'&id='.$id);
+    exit();}
 }
 
 
@@ -741,7 +826,7 @@ function addUser($conn, $first_name, $last_name, $email, $password, $address, $t
   $sql = 'insert into users (first_name, last_name, email, password, address, type, is_blocked)
     values (?,?,?,?,?,?,?);';
   $stmt = $conn->prepare($sql);
-  $hashedPwd=password_hash($password, PASSWORD_DEFAULT);
+  $hashedPwd = password_hash($password, PASSWORD_DEFAULT);
   $stmt->bind_param("ssssssi", $first_name, $last_name, $email, $hashedPwd, $address, $type, $is_blocked);
   $stmt->execute();
 }
@@ -763,7 +848,7 @@ function editUser($conn, $id, $first_name, $last_name, $email, $password, $addre
     $sql = 'update users set first_name=?, last_name=?, email=?, password=?, address=?, type=?, is_blocked=? where id=?';
     $stmt = $conn->prepare($sql);
     //hashes password
-    $hashedPwd=password_hash($password, PASSWORD_DEFAULT);
+    $hashedPwd = password_hash($password, PASSWORD_DEFAULT);
 
     $stmt->bind_param('ssssssii', $first_name, $last_name, $email, $hashedPwd, $address, $type, $is_blocked, $id);
     $stmt->execute();
@@ -1147,7 +1232,7 @@ function create_fav_cards($userFavourites)
           </div>
           <div class="picture2">
             <img class='card-img-top' src='<?php echo "images/artist_malak/verso_" . $row['id'] . ".png" ?>'
-              alt='Card image cap' title="press for more details">
+              alt='Card image cap' title="press for more details">  
           </div>
         </div>
       </a>

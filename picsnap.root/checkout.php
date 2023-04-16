@@ -23,15 +23,41 @@ $result = mysqli_query($conn, $get_cart_items_query)
   or die(mysqli_error($conn));
 
 // If cart isn't empty, calculate sum of product prices
-if (mysqli_num_rows($result) == 0) {
-  echo "Cart is empty";
-} else {
+if (mysqli_num_rows($result) > 0) {
   while ($row = mysqli_fetch_array($result)) {
     $sum += ($row['price'] * $row['quantity']);
   }
 }
 $product_count = mysqli_num_rows($result);
 ?>
+
+<!-- JS that calls update_cart_items.php
+with the cartid, postcardid, and quantity value
+to change the quantity of postcards in the cart in the database
+everytime the quantity is changed
+-->
+<script>
+$('document').ready(function() {
+  const quantities = document.querySelectorAll('#editQuantity');
+  quantities.forEach((quantity) => {
+    $(quantity).on('change', function() {
+      const cartId = $(this).data("cart");
+      const postcardId = $(this).data("postcard");
+      const quantityValue = quantity.value
+
+      $.ajax({
+        url: `./includes/update_cart_items.php?cart=${cartId}&postcard=${postcardId}&value=${quantityValue}`
+      });
+
+      location.reload();
+    })
+
+
+
+  })
+});
+</script>
+
 
 
 <div class="container mt-4">
@@ -59,7 +85,11 @@ $product_count = mysqli_num_rows($result);
             <td><?php echo $counter ?></td>
             <td><?php echo $row['name'] ?></td>
             <td>$<?php echo $row['price'] ?></td>
-            <td><?php echo $row['quantity'] ?></td>
+            <td>
+              <input id="editQuantity" data-cart="<?php echo $row['cart_id'] ?>"
+                data-postcard="<?php echo $row['id'] ?>" class="form-control" type="number"
+                value="<?php echo $row['quantity'] ?>" aria-label="default input example" min="1" max="100">
+            </td>
             <td><?php echo "$" . ($row['price'] * $row['quantity']) ?></td>
             <td><a href='./includes/remove_from_cart.php?id=<?php echo $row['id'] ?>'><i
                   class="bi bi-trash3-fill"></i></a></td>
@@ -77,7 +107,7 @@ $product_count = mysqli_num_rows($result);
       $total = $sum + $tax;
       ?>
       <p><b>Total <?php echo "$" . number_format((float)$total, 2, '.', '') ?></b></p>
-      <a class="btn btn-block btn-primary mt-4" href="successful-purchase.php">Checkout</a>
+      <a class="btn btn-block btn-primary mt-4" href="payment.php">Checkout</a>
     </div>
   </div>
 </div>
